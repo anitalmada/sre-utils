@@ -1,66 +1,68 @@
 # sre-utils
 
-Conjunto de utilidades para el día a día de un SRE: scripts que usan la API de AWS (vía AWS CLI) para **relevamientos** y, cuando corresponde, **modificaciones controladas** sobre recursos de la cuenta.
+Small utilities for day-to-day SRE work: scripts that use the AWS API (through the AWS CLI) for **surveys** and, when needed, **controlled changes** to resources in the account.
 
-No es un producto ni un framework. Son herramientas operativas, pequeñas y explícitas, pensadas para auditar status de seguridad, justificar cambios y aplicar remediaciones con cuidado (dry-run primero).
+This is not a product or a framework. The tools are small and explicit, meant for security audits, for justifying a change, and for applying a remediation carefully (dry-run first).
 
-## Requisitos
+**Languages:** English (this file) · [Español](README.es.md)
 
-- [AWS CLI](https://aws.amazon.com/cli/) v2 configurado (`aws configure` o `AWS_PROFILE`)
-- [jq](https://jqlang.github.io/jq/) para parsear respuestas JSON
+## Requirements
+
+- [AWS CLI](https://aws.amazon.com/cli/) v2, configured (`aws configure` or `AWS_PROFILE`)
+- [jq](https://jqlang.github.io/jq/) to parse JSON responses
 - Bash 4+
-- Permisos IAM de lectura sobre los recursos a relevar; escritura solo si vas a usar scripts de remediación (`--apply`)
+- IAM read access on the resources you survey; write access only if you run a remediation script with `--apply`
 
-## Estructura
+## Structure
 
 ```text
 sre-utils/
 └── aws/
-    └── s3/          # Buckets: acceso público, ACLs, cifrado
+    └── s3/          # Buckets: public access, ACLs, encryption
 ```
 
-La idea es agrupar por servicio (`aws/s3`, y más adelante `aws/ec2`, `aws/iam`, etc.) a medida que se sumen utilidades.
+Utilities are grouped by service (`aws/s3`, and later `aws/ec2`, `aws/iam`, and so on) as they are added.
 
-## Scripts actuales (S3)
+## Current scripts (S3)
 
-| Script | Modo | Qué hace |
+| Script | Mode | What it does |
 |--------|------|----------|
-| `bucketAccessList.sh` | Solo lectura | Releva Block Public Access (BPA) por bucket |
-| `bucketAnonymousPolicies.sh` | Solo lectura | Detecta políticas con `Principal: "*"` (acceso anónimo). Excluye `*-public-*` |
-| `bucketAclSurvey.sh` | Solo lectura | Releva Object Ownership y ACLs (AllUsers / AuthenticatedUsers) |
-| `bucketEncryptionSurvey.sh` | Solo lectura | Releva cifrado por defecto (SSE-KMS, SSE-S3 o sin default) |
-| `bucketEnableSseKms.sh` | Dry-run / `--apply` | Planifica o aplica cifrado por defecto SSE-KMS. Excluye `*-public` |
+| `bucketAccessList.sh` | Read-only | Surveys Block Public Access (BPA) per bucket |
+| `bucketAnonymousPolicies.sh` | Read-only | Finds policies with `Principal: "*"` (anonymous access). Excludes `*-public-*` |
+| `bucketAclSurvey.sh` | Read-only | Surveys Object Ownership and ACLs (AllUsers / AuthenticatedUsers) |
+| `bucketEncryptionSurvey.sh` | Read-only | Surveys default encryption (SSE-KMS, SSE-S3, or none) |
+| `bucketEnableSseKms.sh` | Dry-run / `--apply` | Plans or applies default SSE-KMS encryption. Excludes `*-public` |
 
-### Ejemplos
+### Examples
 
 ```bash
-export AWS_PROFILE=mi-cuenta
+export AWS_PROFILE=my-account
 
-# Relevamientos
+# Surveys
 ./aws/s3/bucketAccessList.sh
 ./aws/s3/bucketAnonymousPolicies.sh
-./aws/s3/bucketAclSurvey.sh | tee relevamiento-acl-$(date +%Y%m%d).txt
+./aws/s3/bucketAclSurvey.sh | tee inventory-acl-$(date +%Y%m%d).txt
 ./aws/s3/bucketEncryptionSurvey.sh
 
-# Remediación: primero dry-run, después apply
+# Remediation: dry-run first, then apply
 ./aws/s3/bucketEnableSseKms.sh
 ./aws/s3/bucketEnableSseKms.sh --apply
-./aws/s3/bucketEnableSseKms.sh --apply --cmk alias/mi-clave-s3
+./aws/s3/bucketEnableSseKms.sh --apply --cmk alias/my-key-s3
 ```
 
-## Criterios de diseño
+## Design criteria
 
-- **Relevar antes de cambiar.** La mayoría de los scripts son de solo lectura.
-- **Dry-run por defecto** en scripts que mutan estado.
-- **Exclusiones explícitas** cuando un patrón de nombre implica acceso público intencional (p. ej. buckets `*-public*`), para no romper apps que sirven archivos por URL.
-- **Salida legible en terminal**, apta para pegar en tickets o reportes (`tee`).
+- **Survey before you change anything.** Most scripts are read-only.
+- **Dry-run by default** on scripts that change state.
+- **Explicit exclusions** when a name pattern means public access is intentional (for example buckets matching `*-public*`), so apps that serve files by URL keep working.
+- **Terminal output you can paste** into a ticket or a report (`tee`).
 
-## Alcance y límites
+## Scope and limits
 
-- Operan a nivel de **cuenta / perfil** configurado en la CLI.
-- No reemplazan CSPM, Config Rules ni IaC: complementan el trabajo manual y la evidencia de remediación.
-- Revisá siempre el impacto en aplicaciones (URLs públicas, KMS/SigV4, ACLs vs bucket policies) antes de `--apply`.
+- They run against the **account / profile** configured in the CLI.
+- They do not replace CSPM, Config Rules, or IaC. They support manual work and remediation evidence.
+- Check the impact on applications (public URLs, KMS/SigV4, ACLs vs bucket policies) before `--apply`.
 
-## Contribuciones
+## Contributing
 
-Sumá scripts nuevos bajo `aws/<servicio>/`, documentá uso y modo (lectura vs write) en este README, y preferí dry-run por defecto cuando el script modifique recursos.
+Add new scripts under `aws/<service>/`, document usage and mode (read vs write) in this README, and keep dry-run as the default when a script changes resources.
