@@ -49,6 +49,21 @@ export AWS_PROFILE=mi-cuenta
 ./aws/s3/bucketEnableSseKms.sh --apply
 ./aws/s3/bucketEnableSseKms.sh --apply --cmk alias/mi-clave-s3
 ```
+## Output de ejemplo
+
+Command: `./aws/s3/bucketAccessList.sh`
+```
+BPA ACTIVO: codepipeline-us-east-1-123456789012
+BPA INCOMPLETO: demo-sre-utilities
+{
+  "BlockPublicAcls": false,
+  "IgnorePublicAcls": false,
+  "BlockPublicPolicy": false,
+  "RestrictPublicBuckets": false
+}
+SIN BPA: elasticbeanstalk-us-east-1-123456789012 (sin configuración)
+BPA ACTIVO: sre-utilities-bpa
+```
 
 ## Criterios de diseño
 
